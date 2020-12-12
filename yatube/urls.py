@@ -1,11 +1,11 @@
 from django.conf import settings
+from django.conf.urls import handler404, handler500
 from django.conf.urls.static import static
-from posts.views import page_not_found, server_error
 from django.contrib import admin
 from django.contrib.flatpages import views
 from django.urls import include, path
-from django.conf.urls import handler404, handler500
 
+from posts.views import page_not_found, server_error
 
 handler404 = 'posts.views.page_not_found' #noqa
 handler500 = 'posts.views.server_error' #noqa

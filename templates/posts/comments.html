@@ -4,12 +4,18 @@
     <div class="media-body card-body">
         <h5 class="mt-0">
             <a href="{% url 'profile' item.author.username %}"
-               name="comment_{{ item.id }}">
-                {{ item.author.username }}
+                name="comment_{{ item.id }}">
+                {{ item.author.get_full_name }}
             </a>
         </h5>
         <p>{{ item.text | linebreaksbr }}</p>
     </div>
+    {% if request.user == item.author %}
+        <a class="btn btn-sm btn-primary" 
+            href="{% url 'delete_comment' item.post.author item.post.id item.id %}"
+            role="button">Удалить комментарий
+        </a>
+    {% endif %}
 </div>
 {% endfor %}
 

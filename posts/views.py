@@ -3,7 +3,7 @@ from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import CommentForm, PostForm
-from .models import Follow, Group, Post, User
+from .models import Comment, Follow, Group, Post, User
 from .settings import POSTS_PER_PAGE
 
 
@@ -35,8 +35,8 @@ def new_post(request):
                     files=request.FILES or None)
     if not form.is_valid():
         context = {
-        'form': form,
-        'is_new_post': True,
+            'form': form,
+            'is_new_post': True,
         }
         return render(request, 'posts/new.html', context)
     post = form.save(commit=False)
@@ -81,7 +81,7 @@ def post_view(request, username, post_id):
 
 @login_required
 def post_edit(request, username, post_id):
-    if username != request.user.username:
+    if User.objects.get(username=username) != request.user:
         return redirect('post', username, post_id)
     post = get_object_or_404(Post, id=post_id, author__username=username)
     form = PostForm(request.POST or None,
@@ -92,7 +92,7 @@ def post_edit(request, username, post_id):
             'form': form,
             'post': post,
         }
-        return render(request, "posts/new.html", context)
+        return render(request, 'posts/new.html', context)
     form.save()
     return redirect('post', username, post_id)
 
@@ -123,7 +123,18 @@ def add_comment(request, username, post_id):
         comment.save()
     return redirect('post', username, post_id)
 
-# Это рабочий вариант
+
+@login_required
+def delete_comment(request, username, post_id, comment_id):
+    """ Функция удаления коментария его автором
+    самостоятельная работа"""
+    post = get_object_or_404(Post, id=post_id, author__username=username)
+    comment = get_object_or_404(Comment, pk=comment_id, post=post)
+    if comment.author == request.user:
+        comment.delete()
+    return redirect('post', username, post_id,)
+
+
 @login_required
 def follow_index(request):
     posts = Post.objects.filter(
@@ -142,10 +153,10 @@ def profile_follow(request, username):
     author = get_object_or_404(User, username=username)
     if author != request.user:
         Follow.objects.get_or_create(
-        user=request.user,
-        author=author,
+            user=request.user,
+            author=author,
         )
-    return redirect ('profile', username)
+    return redirect('profile', username)
 
 
 @login_required
@@ -153,4 +164,4 @@ def profile_unfollow(request, username):
     author = get_object_or_404(User, username=username)
     user = request.user
     Follow.objects.filter(author=author, user=user).delete()
-    return redirect ('profile', username)
+    return redirect('profile', username)

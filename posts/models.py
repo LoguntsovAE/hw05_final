@@ -67,7 +67,7 @@ class Comment(models.Model):
         )
     text = models.TextField(
         'Текст комментария',
-        help_text='Оставьте комментарий себе'
+        help_text='Текст комментария'
         )
     created = models.DateTimeField(
         'Дата комментария',

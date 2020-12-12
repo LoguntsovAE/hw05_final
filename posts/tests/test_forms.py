@@ -1,5 +1,6 @@
 import tempfile
 
+from django import forms
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
 from django.urls import reverse
@@ -31,7 +32,6 @@ class PostCreateFormTest(TestSettings):
             'text': 'Создание нового поста',
             'group': self.group.id,
             'image': uploaded
-            # точно ли пост с картинкой?
         }
         Post.objects.all().delete()
         response = self.authorized_client.post(
@@ -42,27 +42,47 @@ class PostCreateFormTest(TestSettings):
         self.assertRedirects(response, self.URL_NAMES['INDEX'])
         post = response.context.get('page')[0]
         self.assertTrue(post)
-        # Предыдущий способ тестирования
-        # self.assertEqual(len(post), 1)
-        self.assertEqual(post.text, form_data['text'])
-        self.assertEqual(post.author, self.user)
-        self.assertEqual(post.group_id, form_data['group'])
-        # Проверка, что картинка есть в ответе
         self.assertTrue(response.context.get('page').object_list[0].image)
         self.assertNotEqual(post.group.id, self.group_edit)
+        check_data = {
+            post.text: form_data['text'],
+            post.author: self.user,
+            post.group_id: form_data['group'],
+        }
+        for result, data in check_data.items():
+            with self.subTest(value=result):
+                self.assertEqual(result, data)
 
     def test_edit_post(self):
         """Тест для проверки, что пост изменяется после редактирования"""
         form_data = {
-            "text": "Новый текст",
-            "group": self.group_edit.id,
+            'text': 'Новый текст',
+            'group': self.group_edit.id,
         }
         response = self.authorized_client.post(
-            reverse("post_edit", args=[self.user, self.post.id]),
+            reverse('post_edit', args=[self.user, self.post.id]),
             data=form_data,
             follow=True,
         )
         post = response.context['post']
-        self.assertEqual(post.text, form_data["text"])
+        self.assertEqual(post.text, form_data['text'])
         self.assertEqual(post.author, self.user)
         self.assertEqual(post.group.id, form_data["group"])
+
+    def test_new_post_fields(self):
+        """ Тест проверяет типы полей формы создания нового поста"""
+        response = self.authorized_client.get(self.URL_NAMES['NEW_POST'])
+        form_fields = {
+            'text': forms.fields.CharField,
+            'group': forms.fields.ChoiceField
+        }
+        for value, expected in form_fields.items():
+            with self.subTest(value=value):
+                form_field = response.context.get('form').fields.get(value)
+                self.assertIsInstance(form_field, expected)
+
+    def test_comment_field(self):
+        """Тест проверяет типы полей формы создания нового комментария """
+        response = self.authorized_client.get(self.URL_NAMES['POST'])
+        form_field = response.context.get('form').fields.get('text')
+        self.assertIsInstance(form_field, forms.fields.CharField)

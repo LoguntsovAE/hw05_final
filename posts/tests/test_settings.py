@@ -98,7 +98,7 @@ class TestSettings(TestCase):
             'COMMENT': reverse(
                 'add_comment',
                 args=[self.user.username, self.post.id]
-                ),    
+                ),
             'FOLLOW': reverse(
                 'follow_index',
                 ),

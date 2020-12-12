@@ -1,9 +1,9 @@
 import tempfile
 
-from django import forms
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
+from django.urls import reverse
 
 from posts.models import Comment, Follow, Post
 from posts.settings import POSTS_PER_PAGE
@@ -12,7 +12,6 @@ from posts.tests.test_settings import TestSettings
 
 @override_settings(MEDIA_ROOT=tempfile.gettempdir())
 class PostPagesTests(TestSettings):
-
 
     def test_view_function_uses_correct_template(self):
         """ Тест для проверки того,
@@ -32,30 +31,14 @@ class PostPagesTests(TestSettings):
                     template = 'posts/new.html'
                 self.assertTemplateUsed(response, template)
 
-
     def test_index_page_show_correct_context(self):
         """ Тест проверяет контекст главной страницы"""
         response = self.authorized_client.get(self.URL_NAMES['INDEX'])
         self.assertIn('page', response.context)
         self.assertEqual(
-            response.context['paginator'].page(1).object_list.count(), POSTS_PER_PAGE
-        )
-
-        """
-        Тест работает, но можно ли оптимизировать?
-        Пока сохраню
-        Post.objects.all().delete()
-        new_post = Post.objects.create(
-            text='Post text',
-            pub_date='12.12.12',
-            author=self.user,
-            image=self.uploaded
+            response.context['paginator'].page(1).object_list.count(),
+            POSTS_PER_PAGE
             )
-        response = self.authorized_client.get(self.URL_NAMES['INDEX'])
-        response_post = response.context['page'].object_list[0].image
-        self.assertEqual(response_post, new_post.image )
-        """
-
 
     def test_group_page_show_correct_context(self):
         """ Тест проверяет контекст страницы группы"""
@@ -63,28 +46,15 @@ class PostPagesTests(TestSettings):
         self.assertIn('page', response.context)
         self.assertEqual(response.context['group'], self.group)
         self.assertEqual(
-            response.context["paginator"].page(1).object_list.count(), POSTS_PER_PAGE
+            response.context["paginator"].page(1).object_list.count(),
+            POSTS_PER_PAGE
             )
-
-    def test_new_post_page_show_correct_context(self):
-        """ Тест проверяет контекст страницы создания поста"""
-        response = self.authorized_client.get(self.URL_NAMES['NEW_POST'])
-        form_fields = {
-            'text': forms.fields.CharField,
-            'group': forms.fields.ChoiceField
-        }
-        for value, expected in form_fields.items():
-            with self.subTest(value=value):
-                form_field = response.context.get('form').fields.get(value)
-                self.assertIsInstance(form_field, expected)
-
 
     def test_post_edit_show_correct_context(self):
         """ Тест проверяет контекст страницы редактирования поста"""
         response = self.authorized_client.get(self.URL_NAMES['POST_EDIT'])
         self.assertIn('form', response.context)
         self.assertEqual(response.context["post"], self.post)
-
 
     def test_profile_page_show_correct_context(self):
         """ Тест проверяет контекст страницы профиля"""
@@ -95,7 +65,6 @@ class PostPagesTests(TestSettings):
         self.assertIn('paginator', response.context)
         posts_count = response.context['paginator'].page(2).object_list.count()
         self.assertEqual(posts_count, 2)
-
 
     def test_post_page_show_correct_context(self):
         """ Тест проверяет контекст страницы поста"""
@@ -113,7 +82,6 @@ class PostPagesTests(TestSettings):
             self.assertEqual(response_post.group, post_in_bd.group)
         if response_post.image:
             self.assertEqual(response_post.image, self.post.image)
-
 
     def test_page_context_include_image(self):
         """ Тестирование контекста страницы на наличие картинки """
@@ -152,10 +120,9 @@ class PostPagesTests(TestSettings):
                     context = response.context.get('page').object_list[0].image
                 self.assertEqual(post_with_image.image, context, name)
 
-
     def test_cache_index_page(self):
         response_1 = self.authorized_client.get(self.URL_NAMES['INDEX'])
-        """Тестирование кеша главной страницы"""
+        """Тестирование кэша главной страницы"""
         Post.objects.create(
             text='Кэш это круто',
             author=self.user,
@@ -166,40 +133,41 @@ class PostPagesTests(TestSettings):
         response_3 = self.authorized_client.get(self.URL_NAMES['INDEX'])
         self.assertNotEqual(response_1.content, response_3.content)
 
-# Убарть повторения! Запихнуть в цикл
     def test_authorized_client_can_follow_and_unfollow(self):
+        """ Тест проверяет, что авторизованный может подписаться и отписаться,
+        а неавторизованный - нет"""
         Follow.objects.all().delete()
         self.authorized_client.get(self.URL_NAMES['PROFILE_FOLLOW'])
-        exist = Follow.objects.filter(user=self.user_not_author, author=self.user).exists()
+        follow = Follow.objects.filter(
+            user=self.user_not_author,
+            author=self.user
+            )
+        exist = follow.exists()
         self.assertFalse(exist)
         self.not_author.get(self.URL_NAMES['PROFILE_FOLLOW'])
-        exist = Follow.objects.filter(user=self.user_not_author, author=self.user).exists()
+        exist = follow.exists()
         self.assertTrue(exist)
         self.not_author.get(self.URL_NAMES['PROFILE_UNFOLLOW'])
-        exist = Follow.objects.filter(user=self.user_not_author, author=self.user).exists()
+        exist = follow.exists()
         self.assertFalse(exist)
 
-
     def test_follow_index_after_author_create_post(self):
-        # не автор подписывается на автора
-        not_author_follow = self.not_author.get(self.URL_NAMES['PROFILE_FOLLOW'])
-        # Удаляются все существующие посты
+        """ Тест проверяет, что пост любимого автора
+        появляется в ленте избранных"""
+        self.not_author.get(self.URL_NAMES['PROFILE_FOLLOW']
+            )
         Post.objects.all().delete()
-        # автор создаёт пост
-        post = Post.objects.create(
+        Post.objects.create(
             text='Post text',
-            author= self.user,
+            author=self.user,
         )
-        # не автор запрашивает страницу с любимыми авторами
         response = self.not_author.get(self.URL_NAMES['FOLLOW'])
         posts_count = response.context['paginator'].object_list.count()
         self.assertEqual(posts_count, 1)
 
     def test_only_authorized_client_can_comment_post(self):
-        """ Тест проверяет, 
-        что авторизованный пользователь может комментировать,
-        а неавторизованный - нет"""
-        
+        """ Тест проверяет, что авторизованный пользователь
+        может комментировать, а неавторизованный - нет"""
         self.assertFalse(Comment.objects.all().exists())
         form_data = {
             'text': 'comment',
@@ -211,10 +179,27 @@ class PostPagesTests(TestSettings):
             )
         self.assertEqual(guest_response.status_code, 302)
         self.assertIn('/auth/login/', guest_response.url)
-        auth_response = self.authorized_client.post(
+        self.assertFalse(Comment.objects.all().exists())
+        authorized_response = self.authorized_client.post(
             self.URL_NAMES['COMMENT'],
             data=form_data,
             Follow=True,
             )
-        self.assertEqual(auth_response.status_code, 302)
+        self.assertEqual(authorized_response.status_code, 302)
         self.assertTrue(Comment.objects.all().exists())
+
+    def test_author_cat_delete_yourself_comment(self):
+        """ Тест проверяет, что комментарий удаляется -
+        самостятельная работа"""
+        comment = Comment.objects.create(
+            text='comment',
+            author=self.user,
+            post=self.post,
+        )
+        self.authorized_client.post(
+            reverse('delete_comment',
+            args=[self.user.username, comment.post.id, comment.id],
+            ),
+            follow=True,
+        )
+        self.assertFalse(Comment.objects.all().exists())

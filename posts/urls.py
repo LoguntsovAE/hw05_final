@@ -36,6 +36,10 @@ urlpatterns = [
         views.add_comment,
         name='add_comment'),
     path(
+        '<str:username>/<int:post_id>/<int:comment_id>/delete_comment/',
+        views.delete_comment,
+        name='delete_comment'),
+    path(
         '<str:username>/follow/',
         views.profile_follow,
         name='profile_follow'),
