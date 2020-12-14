@@ -44,7 +44,7 @@ class PostURLSTests(TestSettings):
                 if name == 'PAGE_404':
                     code = 404
                 if name == 'COMMENT':
-                    code = 302   
+                    code = 302
                 follow_urls = (
                     'PROFILE_FOLLOW',
                     'PROFILE_UNFOLLOW',

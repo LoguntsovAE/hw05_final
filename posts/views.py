@@ -6,10 +6,6 @@ from .forms import CommentForm, PostForm
 from .models import Comment, Follow, Group, Post, User
 from .settings import POSTS_PER_PAGE
 
-# # импорты для лайков
-# from django.http import JsonResponse
-# from django.views.decorators.http import require_POST
-
 
 def index(request):
     post_list = Post.objects.all()
@@ -61,7 +57,7 @@ def profile(request, username):
 
 
 def post_view(request, username, post_id):
-    post = get_object_or_404(Post, id=post_id, author__username=username)
+    post = get_object_or_404(Post, author__username=username, id=post_id)
     form = CommentForm()
     comments = post.comments.all()
     context = {
@@ -116,7 +112,7 @@ def add_comment(request, username, post_id):
     comment = form.save(commit=False)
     comment.author = request.user
     comment.post = post
-    comment.save() 
+    comment.save()
     return redirect('post', username, post_id)
 
 
@@ -164,27 +160,3 @@ def profile_unfollow(request, username):
     )
     follow.delete()
     return redirect('profile', username)
-
-
-# Не понятный джсон запрос
-# Явно не оптимальная структура
-# Добавлены лишние импорты
-# Что за декоратор: require_POST - 
-# возвращает ошибку HttpResponseNotAllowed 
-# (статус ответа 405), если запрос отправлен не методом POST.
-# @login_required
-# @require_POST
-# def post_like(request):
-#     post_id = request.POST.get('id')
-#     action = request.POST.get('action')
-#     if post_id and action:
-#         try:
-#             post = Post.objects.get(id=post_id)
-#             if action == 'like':
-#                 post.users_like.add(request.user)
-#             else:
-#                 post.users_like.remove(request.user)
-#             return JsonResponse({'status':'ok'})
-#         except:
-#             pass
-#     return JsonResponse({'status':'ok'})

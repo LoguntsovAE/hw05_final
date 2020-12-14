@@ -90,9 +90,6 @@ class TestSettings(TestCase):
             'PAGE_404': reverse(
                 '404'
                 ),
-            'PAGE_500': reverse(
-                '500'
-                ),
             'COMMENT': reverse(
                 'add_comment',
                 args=[self.user.username, self.post.id]

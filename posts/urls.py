@@ -15,10 +15,6 @@ urlpatterns = [
     path('follow/',
          views.follow_index,
          name='follow_index'),
-    # path(
-    #     '<str:username>/',
-    #     views.post_like,
-    #     name='like'),
     path('<str:username>/',
          views.profile,
          name='profile'),

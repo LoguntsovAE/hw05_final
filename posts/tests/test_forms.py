@@ -3,7 +3,6 @@ import tempfile
 from django import forms
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
-from django.urls import reverse
 
 from posts.models import Post
 from posts.tests.test_settings import TestSettings
@@ -14,7 +13,7 @@ SMALL_GIF = (b'\x47\x49\x46\x38\x39\x61\x02\x00'
                 b'\x00\x00\x00\x2C\x00\x00\x00\x00'
                 b'\x02\x00\x01\x00\x00\x02\x02\x0C'
                 b'\x0A\x00\x3B'
-        )
+            )
 
 
 @override_settings(MEDIA_ROOT=tempfile.gettempdir())
@@ -24,7 +23,7 @@ class PostCreateFormTest(TestSettings):
         """Тест для проверки, что пост создаётся,
         и не попадает в группу, для которой не предназначен,
         а после создания автор перенаправляется на главную страницу"""
-        
+
         uploaded = SimpleUploadedFile(
             name='test.gif',
             content=SMALL_GIF,
@@ -45,8 +44,6 @@ class PostCreateFormTest(TestSettings):
         posts = response.context['page']
         self.assertEqual(len(posts), 1)
         self.assertTrue(posts[0].image)
-        #self.assertNotEqual(post.group.id, self.group_edit)
-        # точно так?
         self.assertEqual(posts[0].text, form_data['text'])
         self.assertEqual(posts[0].group.id, form_data['group'])
         self.assertEqual(posts[0].author, self.user)

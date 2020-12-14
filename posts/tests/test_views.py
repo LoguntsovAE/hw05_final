@@ -9,6 +9,14 @@ from posts.models import Comment, Follow, Post
 from posts.settings import POSTS_PER_PAGE
 from posts.tests.test_settings import TestSettings
 
+SMALL_GIF = (b'\x47\x49\x46\x38\x39\x61\x02\x00'
+                b'\x01\x00\x80\x00\x00\x00\x00\x00'
+                b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
+                b'\x00\x00\x00\x2C\x00\x00\x00\x00'
+                b'\x02\x00\x01\x00\x00\x02\x02\x0C'
+                b'\x0A\x00\x3B'
+            )
+
 
 @override_settings(MEDIA_ROOT=tempfile.gettempdir())
 class PostPagesTests(TestSettings):
@@ -20,7 +28,7 @@ class PostPagesTests(TestSettings):
             self.URL_NAMES['INDEX']: 'index.html',
             self.URL_NAMES['GROUP']: 'posts/group.html',
             self.URL_NAMES['NEW_POST']: 'posts/new.html',
-            self.URL_NAMES['POST_EDIT']: 'posts/post_edit.html',
+            self.URL_NAMES['POST_EDIT']: 'posts/new.html',
             self.URL_NAMES['PROFILE']: 'posts/profile.html',
             self.URL_NAMES['POST']: 'posts/post.html',
             self.URL_NAMES['ABOUT-AUTHOR']: 'flatpages/default.html',
@@ -32,91 +40,30 @@ class PostPagesTests(TestSettings):
                 response = self.authorized_client.get(reverse_name)
                 self.assertTemplateUsed(response, template)
 
-    def test_index_page_show_correct_context(self):
-        """ Тест проверяет контекст главной страницы"""
-        for number in range(2, 13):
-            Post.objects.create(
-                text="Some text",
-                author=self.user,
-                group=self.group
-                )
-        response = self.authorized_client.get(self.URL_NAMES['INDEX'])
-        self.assertIn('page', response.context)
-        self.assertEqual(
-            response.context['paginator'].page(1).object_list.count(),
-            POSTS_PER_PAGE
-            )
-
-    def test_group_page_show_correct_context(self):
-        """ Тест проверяет контекст страницы группы"""
-        for number in range(2, 13):
-            Post.objects.create(
-                text="Some text",
-                author=self.user,
-                group=self.group
-                )
-        response = self.authorized_client.get(self.URL_NAMES['GROUP'])
-        self.assertIn('page', response.context)
-        self.assertEqual(response.context['group'], self.group)
-        self.assertEqual(
-            response.context["paginator"].page(1).object_list.count(),
-            POSTS_PER_PAGE
-            )
-
     def test_post_edit_show_correct_context(self):
-        """ Тест проверяет контекст страницы редактирования поста"""
-        response = self.authorized_client.get(self.URL_NAMES['POST_EDIT'])
-        self.assertIn('form', response.context)
-        self.assertEqual(response.context["post"], self.post)
-
-    def test_profile_page_show_correct_context(self):
-        """ Тест проверяет контекст страницы профиля"""
-        for number in range(2, 13):
-            Post.objects.create(
-                text="Some text",
-                author=self.user,
-                group=self.group
-                )
-        response = self.authorized_client.get(self.URL_NAMES['PROFILE'])
-        self.assertEqual(response.context["page"][0].author, self.user)
-        self.assertIn('page', response.context)
-        self.assertIn('author', response.context)
-        self.assertIn('paginator', response.context)
-        posts_count = response.context['paginator'].page(2).object_list.count()
-        self.assertEqual(posts_count, 2)
-
-    def test_post_page_show_correct_context(self):
-        """ Тест проверяет контекст страницы поста"""
-        response = self.authorized_client.get(self.URL_NAMES['POST'])
-        self.assertIn('post', response.context)
-        self.assertIn('author', response.context)
-        response_post = response.context['post']
-        post_in_bd = Post.objects.get(
-            author__username=self.user.username,
-            id=self.post.id
-            )
-        self.assertEqual(response_post.text, post_in_bd.text)
-        self.assertEqual(response_post.author, post_in_bd.author)
-        if self.group:
-            self.assertEqual(response_post.group, post_in_bd.group)
-        if response_post.image:
-            self.assertEqual(response_post.image, self.post.image)
+        """ Тест проверяет контекст страницы создания и редактирования поста"""
+        url_names = {
+            'post_edit': self.URL_NAMES['POST_EDIT'],
+            'new_post': self.URL_NAMES['NEW_POST'],
+        }
+        for name, url in url_names.items():
+            with self.subTest(url=url):
+                response = self.authorized_client.get(url)
+                self.assertIn('form', response.context)
+                if name == 'post_edit':
+                    self.assertIn('post', response.context)
 
     def test_page_context_include_image(self):
         """ Тестирование контекста страницы на наличие картинки """
-        small_gif = (b'\x47\x49\x46\x38\x39\x61\x02\x00'
-                b'\x01\x00\x80\x00\x00\x00\x00\x00'
-                b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
-                b'\x00\x00\x00\x2C\x00\x00\x00\x00'
-                b'\x02\x00\x01\x00\x00\x02\x02\x0C'
-                b'\x0A\x00\x3B'
-            )
         uploaded = SimpleUploadedFile(
             name='Тестовая картинка',
-            content=small_gif,
+            content=SMALL_GIF,
             content_type='image/gif'
         )
         Post.objects.all().delete()
+        """ Насчёт замечания по указанию самозаполняемых полей:
+        если этого не делать, то запрос страницы поста выдаёт 404 код
+        и только явное указание id позволяет получить 200 код """
         post_with_image = Post.objects.create(
             id=1,
             text='Post text',
@@ -124,24 +71,24 @@ class PostPagesTests(TestSettings):
             group=self.group,
             image=uploaded,
             )
-        client = self.authorized_client
         responses = {
-            'index': client.get(self.URL_NAMES['INDEX']),
-            'profile': client.get(self.URL_NAMES['PROFILE']),
-            'group': client.get(self.URL_NAMES['GROUP']),
-            'post': client.get(self.URL_NAMES['POST']),
+            'post': self.URL_NAMES['POST'],
+            'index': self.URL_NAMES['INDEX'],
+            'profile': self.URL_NAMES['PROFILE'],
+            'group': self.URL_NAMES['GROUP'],
         }
-        for name, response in responses.items():
+        for name, url in responses.items():
             with self.subTest(name=name):
+                response = self.not_author.get(url)
                 if name == 'post':
-                    context = response.context.get('post').image
+                    post_image = response.context['post'].image
                 else:
-                    context = response.context.get('page').object_list[0].image
-                self.assertEqual(post_with_image.image, context, name)
+                    post_image = response.context.get('page')[0].image
+                self.assertEqual(post_with_image.image, post_image)
 
     def test_cache_index_page(self):
-        response_1 = self.authorized_client.get(self.URL_NAMES['INDEX'])
         """Тестирование кэша главной страницы"""
+        response_1 = self.authorized_client.get(self.URL_NAMES['INDEX'])
         Post.objects.create(
             text='Кэш это круто',
             author=self.user,
@@ -152,41 +99,57 @@ class PostPagesTests(TestSettings):
         response_3 = self.authorized_client.get(self.URL_NAMES['INDEX'])
         self.assertNotEqual(response_1.content, response_3.content)
 
-    def test_authorized_client_can_follow_and_unfollow(self):
-        """ Тест проверяет, что авторизованный может подписаться и отписаться,
-        а неавторизованный - нет"""
+    def test_authorized_client_can_not_follow_himself(self):
+        """ Тест проверяет, что авторизованный пользователь не может
+        подписаться сам на себя """
         Follow.objects.all().delete()
         self.authorized_client.get(self.URL_NAMES['PROFILE_FOLLOW'])
-        follow = Follow.objects.filter(
+        self.assertFalse(Follow.objects.exists())
+
+    def test_authorized_client_can_follow_another_author(self):
+        """ Тест проверяет, что авторизованный пользователь может подписаться
+        на другого автора"""
+        Follow.objects.all().delete()
+        self.not_author.get(self.URL_NAMES['PROFILE_FOLLOW'])
+        self.assertTrue(Follow.objects.exists())
+
+    def test_authorized_client_can_unfollow(self):
+        """ Тест проверяет, что авторизованный пользователь может отписаться
+        от другого автора"""
+        Follow.objects.get_or_create(
             user=self.user_not_author,
             author=self.user
-            )
-        exist = follow.exists()
-        self.assertFalse(exist)
-        self.not_author.get(self.URL_NAMES['PROFILE_FOLLOW'])
-        exist = follow.exists()
-        self.assertTrue(exist)
+        )
         self.not_author.get(self.URL_NAMES['PROFILE_UNFOLLOW'])
-        exist = follow.exists()
-        self.assertFalse(exist)
+        self.assertFalse(Follow.objects.exists())
+
+    def test_not_authorized_client_can_not_follow(self):
+        """ Тест проверяет, что неавторизованный пользователь
+        не может подписаться"""
+        Follow.objects.all().delete()
+        self.guest_client.get(self.URL_NAMES['PROFILE_FOLLOW'])
+        self.assertFalse(Follow.objects.exists())
 
     def test_follow_index_after_author_create_post(self):
         """ Тест проверяет, что пост любимого автора
         появляется в ленте избранных"""
-        self.not_author.get(self.URL_NAMES['PROFILE_FOLLOW']
-            )
+        Follow.objects.create(
+            user=self.user_not_author,
+            author=self.user
+        )
         Post.objects.all().delete()
-        Post.objects.create(
+        post = Post.objects.create(
             text='Post text',
             author=self.user,
         )
         response = self.not_author.get(self.URL_NAMES['FOLLOW'])
-        posts_count = response.context['paginator'].object_list.count()
-        self.assertEqual(posts_count, 1)
+        response_post = response.context['page'][0]
+        self.assertEqual(post.text, response_post.text)
+        self.assertEqual(post.author, response_post.author)
 
-    def test_only_authorized_client_can_comment_post(self):
-        """ Тест проверяет, что авторизованный пользователь
-        может комментировать, а неавторизованный - нет"""
+    def test_only_guest_client_can_not_comment_post(self):
+        """ Тест проверяет, что неавторизованный пользователь
+        не может комментировать"""
         self.assertFalse(Comment.objects.all().exists())
         form_data = {
             'text': 'comment',
@@ -197,8 +160,15 @@ class PostPagesTests(TestSettings):
             Follow=True,
             )
         self.assertEqual(guest_response.status_code, 302)
-        self.assertIn('/auth/login/', guest_response.url)
         self.assertFalse(Comment.objects.all().exists())
+
+    def test_only_authorized_client_can_comment_post(self):
+        """ Тест проверяет, что авторизованный пользователь
+        может комментировать"""
+        self.assertFalse(Comment.objects.all().exists())
+        form_data = {
+            'text': 'comment',
+        }
         authorized_response = self.authorized_client.post(
             self.URL_NAMES['COMMENT'],
             data=form_data,
@@ -206,6 +176,10 @@ class PostPagesTests(TestSettings):
             )
         self.assertEqual(authorized_response.status_code, 302)
         self.assertTrue(Comment.objects.all().exists())
+        comment = Comment.objects.get(id=1)
+        self.assertEqual(form_data['text'], comment.text)
+        self.assertEqual(self.user, comment.author)
+        self.assertEqual(self.post.id, comment.post.id)
 
     def test_author_cat_delete_yourself_comment(self):
         """ Тест проверяет, что комментарий удаляется -
@@ -217,8 +191,77 @@ class PostPagesTests(TestSettings):
         )
         self.authorized_client.post(
             reverse('delete_comment',
-            args=[self.user.username, comment.post.id, comment.id],
-            ),
-            follow=True,
-        )
+                    args=[self.user.username, comment.post.id, comment.id],),
+                    follow=True,
+                    )
         self.assertFalse(Comment.objects.all().exists())
+
+    def test_pages_show_right_amount_posts(self):
+        """ Тест проверяет количество пост на странице """
+        for number in range(2, 13):
+            Post.objects.create(
+                text="Some text",
+                author=self.user,
+                group=self.group
+                )
+        request_urls = (
+            self.URL_NAMES['INDEX'],
+            self.URL_NAMES['GROUP'],
+            self.URL_NAMES['PROFILE'],
+        )
+        for url in request_urls:
+            with self.subTest(url=url):
+                response = self.authorized_client.get(url).context['paginator']
+                posts_count = response.page(1).object_list.count()
+                self.assertEqual(posts_count, POSTS_PER_PAGE)
+
+    def test_pages_show_correct_context(self):
+        """ Шаблоны сформированы с правильным контекстом"""
+        url_names = [
+            self.URL_NAMES['INDEX'],
+            self.URL_NAMES['GROUP'],
+            self.URL_NAMES['PROFILE'],
+            self.URL_NAMES['POST'],
+        ]
+        for url in url_names:
+            with self.subTest(url=url):
+                response = self.authorized_client.get(url)
+                if 'page' in response.context:
+                    post_context = response.context['page'][0]
+                else:
+                    post_context = response.context[0]['post']
+                self.assertEqual(post_context, self.post)
+
+    def test_pages_show_correct_context_with_group(self):
+        """ Шаблоны сформированы с правильным контекстом группы"""
+        url_names = [
+            self.URL_NAMES['INDEX'],
+            self.URL_NAMES['GROUP'],
+            self.URL_NAMES['PROFILE'],
+            self.URL_NAMES['POST'],
+        ]
+        for url in url_names:
+            with self.subTest(url=url):
+                response = self.authorized_client.get(url)
+                if 'page' in response.context:
+                    post_context = response.context['page'][0].group.title
+                else:
+                    post_context = response.context[0]['post'].group.title
+                self.assertEqual(post_context, self.post.group.title)
+
+    def test_pages_show_correct_context_with_author(self):
+        """ Шаблоны сформированы с правильным контекстом автора"""
+        url_names = [
+            self.URL_NAMES['INDEX'],
+            self.URL_NAMES['GROUP'],
+            self.URL_NAMES['PROFILE'],
+            self.URL_NAMES['POST'],
+        ]
+        for url in url_names:
+            with self.subTest(url=url):
+                response = self.authorized_client.get(url)
+                if 'page' in response.context:
+                    post_context = response.context['page'][0].author
+                else:
+                    post_context = response.context[0]['post'].author
+                self.assertEqual(post_context, self.user)

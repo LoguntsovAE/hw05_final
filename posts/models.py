@@ -35,10 +35,6 @@ class Post(models.Model):
         'Картинка',
         upload_to='posts/',
         blank=True, null=True)
-    # users_like = models.ManyToManyField(
-    #     User,
-    #     related_name = 'posts_liked',
-    #     blank = True)
 
     class Meta:
         ordering = ('-pub_date',)
