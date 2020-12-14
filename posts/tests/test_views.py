@@ -17,22 +17,29 @@ class PostPagesTests(TestSettings):
         """ Тест для проверки того,
         что view функция использует верный шаблон"""
         TEMPLATE_NAMES = {
-            'index.html': self.URL_NAMES['INDEX'],
-            'posts/group.html': self.URL_NAMES['GROUP'],
-            'posts/new.html': self.URL_NAMES['NEW_POST'],
-            'posts/post_edit.html': self.URL_NAMES['POST_EDIT'],
-            'posts/profile.html': self.URL_NAMES['PROFILE'],
-            'posts/post.html': self.URL_NAMES['POST'],
+            self.URL_NAMES['INDEX']: 'index.html',
+            self.URL_NAMES['GROUP']: 'posts/group.html',
+            self.URL_NAMES['NEW_POST']: 'posts/new.html',
+            self.URL_NAMES['POST_EDIT']: 'posts/post_edit.html',
+            self.URL_NAMES['PROFILE']: 'posts/profile.html',
+            self.URL_NAMES['POST']: 'posts/post.html',
+            self.URL_NAMES['ABOUT-AUTHOR']: 'flatpages/default.html',
+            self.URL_NAMES['ABOUT-SPEC']: 'flatpages/default.html',
+            self.URL_NAMES['FOLLOW']: 'posts/follow.html',
         }
-        for template, reverse_name in TEMPLATE_NAMES.items():
+        for reverse_name, template in TEMPLATE_NAMES.items():
             with self.subTest(template=template):
                 response = self.authorized_client.get(reverse_name)
-                if template == 'posts/post_edit.html':
-                    template = 'posts/new.html'
                 self.assertTemplateUsed(response, template)
 
     def test_index_page_show_correct_context(self):
         """ Тест проверяет контекст главной страницы"""
+        for number in range(2, 13):
+            Post.objects.create(
+                text="Some text",
+                author=self.user,
+                group=self.group
+                )
         response = self.authorized_client.get(self.URL_NAMES['INDEX'])
         self.assertIn('page', response.context)
         self.assertEqual(
@@ -42,6 +49,12 @@ class PostPagesTests(TestSettings):
 
     def test_group_page_show_correct_context(self):
         """ Тест проверяет контекст страницы группы"""
+        for number in range(2, 13):
+            Post.objects.create(
+                text="Some text",
+                author=self.user,
+                group=self.group
+                )
         response = self.authorized_client.get(self.URL_NAMES['GROUP'])
         self.assertIn('page', response.context)
         self.assertEqual(response.context['group'], self.group)
@@ -58,10 +71,16 @@ class PostPagesTests(TestSettings):
 
     def test_profile_page_show_correct_context(self):
         """ Тест проверяет контекст страницы профиля"""
+        for number in range(2, 13):
+            Post.objects.create(
+                text="Some text",
+                author=self.user,
+                group=self.group
+                )
         response = self.authorized_client.get(self.URL_NAMES['PROFILE'])
         self.assertEqual(response.context["page"][0].author, self.user)
         self.assertIn('page', response.context)
-        self.assertIn('profile', response.context)
+        self.assertIn('author', response.context)
         self.assertIn('paginator', response.context)
         posts_count = response.context['paginator'].page(2).object_list.count()
         self.assertEqual(posts_count, 2)

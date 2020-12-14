@@ -8,6 +8,14 @@ from django.urls import reverse
 from posts.models import Post
 from posts.tests.test_settings import TestSettings
 
+SMALL_GIF = (b'\x47\x49\x46\x38\x39\x61\x02\x00'
+                b'\x01\x00\x80\x00\x00\x00\x00\x00'
+                b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
+                b'\x00\x00\x00\x2C\x00\x00\x00\x00'
+                b'\x02\x00\x01\x00\x00\x02\x02\x0C'
+                b'\x0A\x00\x3B'
+        )
+
 
 @override_settings(MEDIA_ROOT=tempfile.gettempdir())
 class PostCreateFormTest(TestSettings):
@@ -16,16 +24,10 @@ class PostCreateFormTest(TestSettings):
         """Тест для проверки, что пост создаётся,
         и не попадает в группу, для которой не предназначен,
         а после создания автор перенаправляется на главную страницу"""
-        small_gif = (b'\x47\x49\x46\x38\x39\x61\x02\x00'
-                b'\x01\x00\x80\x00\x00\x00\x00\x00'
-                b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
-                b'\x00\x00\x00\x2C\x00\x00\x00\x00'
-                b'\x02\x00\x01\x00\x00\x02\x02\x0C'
-                b'\x0A\x00\x3B'
-        )
+        
         uploaded = SimpleUploadedFile(
             name='test.gif',
-            content=small_gif,
+            content=SMALL_GIF,
             content_type='image/gif'
         )
         form_data = {
@@ -40,18 +42,14 @@ class PostCreateFormTest(TestSettings):
             follow=True
         )
         self.assertRedirects(response, self.URL_NAMES['INDEX'])
-        post = response.context.get('page')[0]
-        self.assertTrue(post)
-        self.assertTrue(response.context.get('page').object_list[0].image)
-        self.assertNotEqual(post.group.id, self.group_edit)
-        check_data = {
-            post.text: form_data['text'],
-            post.author: self.user,
-            post.group_id: form_data['group'],
-        }
-        for result, data in check_data.items():
-            with self.subTest(value=result):
-                self.assertEqual(result, data)
+        posts = response.context['page']
+        self.assertEqual(len(posts), 1)
+        self.assertTrue(posts[0].image)
+        #self.assertNotEqual(post.group.id, self.group_edit)
+        # точно так?
+        self.assertEqual(posts[0].text, form_data['text'])
+        self.assertEqual(posts[0].group.id, form_data['group'])
+        self.assertEqual(posts[0].author, self.user)
 
     def test_edit_post(self):
         """Тест для проверки, что пост изменяется после редактирования"""
@@ -60,7 +58,7 @@ class PostCreateFormTest(TestSettings):
             'group': self.group_edit.id,
         }
         response = self.authorized_client.post(
-            reverse('post_edit', args=[self.user, self.post.id]),
+            self.URL_NAMES['POST_EDIT'],
             data=form_data,
             follow=True,
         )

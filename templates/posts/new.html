@@ -1,15 +1,22 @@
 {% extends "base_temp/base.html" %}
 {% block title %}
-{% if is_new_post %}Создать{% else %}Редактировать{% endif %} запись
+    {% if post %}
+        Редактировать запись
+    {% else %}
+        Создать запись 
+    {% endif %} 
 {% endblock %}
 
 {% block content %}
-{% url 'new_post' as new_post_path %}
 <div class="row justify-content-center">
     <div class="col-md-8 p-5">
         <div class="card">
             <div class="card-header">
-            {% if is_new_post %}Новая{% else %}Редактировать{% endif %} запись
+                {% if post %}
+                    Редактировать запись
+                {% else %}
+                    Новая запись
+                {% endif %} 
             </div>
             <div class="card-body">        
                 {% for error in form.errors %}
@@ -17,11 +24,15 @@
                         {{ error|escape }}
                     </div>
                 {% endfor %}
-
                 <form method="post" enctype="multipart/form-data"
-                action="{% if is_new_post %}{% url 'new_post' %}">{% else %}{% url 'post_edit' post.author post.id %}"{% endif %}
+                    action=
+                    {% if post %}
+                        "{% url 'post_edit' post.author post.id %}"
+                    {% else %}
+                        "{% url 'new_post' %}"
+                    {% endif %}
+                > 
                     {% csrf_token %}
-                    
                     {% for field in form %}
                         <div class="form-group row" aria-required={% if field.field.required %}"true"{% else %}"false"{% endif %}>
                             <label for="{{ field.id_for_label }}" class="col-md-4 col-form-label text-md-right">
@@ -42,7 +53,7 @@
                     {% endfor %}
                     <div class="col-md-6 offset-md-4">
                         <button type="submit" class="btn btn-primary">
-                            {% if is_new_post %}Создать{% else %}Редактировать{% endif %} запись
+                            {% if not post %}Создать{% else %}Редактировать{% endif %} запись
                         </button>
                     </div>
                 </form>

@@ -11,7 +11,7 @@ class TestSettings(TestCase):
     @classmethod
     def setUpClass(cls):
         """Создание объектов.
-        Объекты будут импортироваться в другие тесты"""
+        Объекты будут наследоваться в другие тесты"""
         super().setUpClass()
         cls.user = User.objects.create(
             username='Author'
@@ -21,10 +21,12 @@ class TestSettings(TestCase):
             )
         cls.group = Group.objects.create(
             title='Tittle',
+            slug='Slug',
             description='Description'
             )
         cls.group_edit = Group.objects.create(
             title='Edit group',
+            slug='Edit_slug',
             description='Another description'
             )
         cls.post = Post.objects.create(
@@ -32,13 +34,6 @@ class TestSettings(TestCase):
             author=cls.user,
             group=cls.group,
             )
-        for number in range(2, 13):
-            Post.objects.create(
-                id=number,
-                text="Some text",
-                author=cls.user,
-                group=cls.group
-                )
 
         site = Site.objects.get(id=1)
         flat_about = FlatPage.objects.create(
@@ -94,6 +89,9 @@ class TestSettings(TestCase):
                 ),
             'PAGE_404': reverse(
                 '404'
+                ),
+            'PAGE_500': reverse(
+                '500'
                 ),
             'COMMENT': reverse(
                 'add_comment',
