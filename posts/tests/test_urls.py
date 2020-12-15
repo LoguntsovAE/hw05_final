@@ -1,30 +1,49 @@
 from posts.tests.test_settings import TestSettings
 
+CODE_LIST_ANONYM = {
+            'INDEX': 200,
+            'GROUP': 200,
+            'NEW_POST': 302,
+            'POST_EDIT': 302,
+            'PROFILE': 200,
+            'POST': 200,
+            'ABOUT-AUTHOR': 200,
+            'ABOUT-SPEC': 200,
+            'PAGE_404': 404,
+            'COMMENT': 302,
+            'FOLLOW': 302,
+            'PROFILE_FOLLOW': 302,
+            'PROFILE_UNFOLLOW': 302,
+        }
+
+CODE_LIST_AUTHORIZED = {
+            'INDEX': 200,
+            'GROUP': 200,
+            'NEW_POST': 200,
+            'POST_EDIT': 200,
+            'PROFILE': 200,
+            'POST': 200,
+            'ABOUT-AUTHOR': 200,
+            'ABOUT-SPEC': 200,
+            'PAGE_404': 404,
+            'COMMENT': 302,
+            'FOLLOW': 200,
+            'PROFILE_FOLLOW': 302,
+            'PROFILE_UNFOLLOW': 404,
+        }
+
 
 class PostURLSTests(TestSettings):
 
-    def test_anonymous_user(self):
+    def test_anonym_user(self):
         """ Проверка для анонимного пользователя
             Доступные страницы: главная, группы, профиля,
             поста и статичные страницы
             Недоступны: создание нового поста, редактирование, избранные авторы
         """
-        for name, value in self.URL_NAMES.items():
-            code = 200
-            list_code_302 = (
-                'NEW_POST',
-                'POST_EDIT',
-                'FOLLOW',
-                'PROFILE_FOLLOW',
-                'PROFILE_UNFOLLOW',
-                'COMMENT'
-                )
-            if name in list_code_302:
-                code = 302
-            if name == 'PAGE_404':
-                code = 404
-            response = self.guest_client.get(value)
-            with self.subTest(value=name):
+        for name, code in CODE_LIST_ANONYM.items():
+            response = self.guest_client.get(self.URL_NAMES[name])
+            with self.subTest(name=name):
                 self.assertEquals(response.status_code, code)
 
     def test_authorized_user(self):
@@ -32,24 +51,10 @@ class PostURLSTests(TestSettings):
             Все страницы доступны
             Но страница редактирования поста доступна только его автору
         """
-        for name, value in self.URL_NAMES.items():
-            with self.subTest(url=name):
-                response_not_author = self.not_author.get(value)
-                response_author = self.authorized_client.get(value)
-                response = response_author
-                code = 200
-                if name == 'POST_EDIT':
-                    code = 200
-                    self.assertEqual(response_not_author.status_code, 302)
-                if name == 'PAGE_404':
-                    code = 404
-                if name == 'COMMENT':
-                    code = 302
-                follow_urls = (
-                    'PROFILE_FOLLOW',
-                    'PROFILE_UNFOLLOW',
-                    )
-                if name in follow_urls:
-                    code = 302
-                    response = response_not_author
-                self.assertEqual(response.status_code, code)
+        for name, code in CODE_LIST_AUTHORIZED.items():
+            with self.subTest(name=name):
+                not_author = self.not_author.get(self.URL_NAMES[name])
+                author = self.authorized_client.get(self.URL_NAMES[name])
+                if name == 'POST_EDIT' or name == 'PROFILE_UNFOLLOW':
+                    self.assertEqual(not_author.status_code, 302)
+                self.assertEqual(author.status_code, code)

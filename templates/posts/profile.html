@@ -45,14 +45,14 @@
                 {% endif %}
             </div>
         </div>
-        <div class="container">
+        <div class="col-md-9">
         {% for post in page %}
             {% include "posts/post_item.html" with post=post %}
         {% endfor %}
-        </div>
         {% if page.has_other_pages %}
             {% include "base_temp/paginator.html" with items=page paginator=paginator%}
         {% endif %}
+        </div>
     </div>
 </main>
 {% endblock %}

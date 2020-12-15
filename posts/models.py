@@ -59,6 +59,9 @@ class Comment(models.Model):
         'Дата комментария',
         auto_now_add=True)
 
+    class Meta:
+        ordering = ('-created',)
+
 
 class Follow(models.Model):
     user = models.ForeignKey(

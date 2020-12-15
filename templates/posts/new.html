@@ -1,9 +1,9 @@
 {% extends "base_temp/base.html" %}
 {% block title %}
     {% if post %}
-        Редактировать запись
+        Редактирование записи
     {% else %}
-        Создать запись 
+        Создание записи
     {% endif %} 
 {% endblock %}
 
@@ -13,9 +13,9 @@
         <div class="card">
             <div class="card-header">
                 {% if post %}
-                    Редактировать запись
+                    Редактирование записи
                 {% else %}
-                    Новая запись
+                    Создание записи
                 {% endif %} 
             </div>
             <div class="card-body">        
@@ -34,7 +34,14 @@
                 > 
                     {% csrf_token %}
                     {% for field in form %}
-                        <div class="form-group row" aria-required={% if field.field.required %}"true"{% else %}"false"{% endif %}>
+                        <div class="form-group row"
+                            aria-required=
+                            {% if field.field.required %}
+                                "true"
+                            {% else %}
+                                "false"
+                            {% endif %}
+                        >
                             <label for="{{ field.id_for_label }}" class="col-md-4 col-form-label text-md-right">
                                 {{ field.label }}
                                 {% if field.field.required %}
@@ -53,7 +60,11 @@
                     {% endfor %}
                     <div class="col-md-6 offset-md-4">
                         <button type="submit" class="btn btn-primary">
-                            {% if not post %}Создать{% else %}Редактировать{% endif %} запись
+                            {% if not post %}
+                                Создать запись
+                            {% else %}
+                                Редактировать запись
+                            {% endif %}
                         </button>
                     </div>
                 </form>

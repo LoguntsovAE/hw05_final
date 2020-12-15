@@ -7,8 +7,8 @@ from django.urls import include, path
 
 from posts.views import page_not_found, server_error
 
-handler404 = 'posts.views.page_not_found' #noqa
-handler500 = 'posts.views.server_error' #noqa
+handler404='posts.views.page_not_found'
+handler500='posts.views.server_error'
 
 urlpatterns = [
     path('auth/',
@@ -31,10 +31,10 @@ urlpatterns = [
          include('posts.urls')),
     path('404/',
          page_not_found,
-         name = '404'),
+         name='404'),
     path('500/',
          server_error,
-         name = '500'),
+         name='500'),
 ]
 
 if settings.DEBUG:
