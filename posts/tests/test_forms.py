@@ -15,6 +15,15 @@ SMALL_GIF = (b'\x47\x49\x46\x38\x39\x61\x02\x00'
              b'\x0A\x00\x3B'
              )
 
+URL_NAMES = {
+            'INDEX': reverse(
+                'index'
+                ),
+            'NEW_POST': reverse(
+                'new_post'
+                ),
+        }
+
 
 @override_settings(MEDIA_ROOT=tempfile.gettempdir())
 class PostCreateFormTest(TestCase):
@@ -49,12 +58,6 @@ class PostCreateFormTest(TestCase):
             group=self.group,
             )
         self.URL_NAMES = {
-            'INDEX': reverse(
-                'index'
-                ),
-            'NEW_POST': reverse(
-                'new_post'
-                ),
             'POST_EDIT': reverse(
                 'post_edit',
                 args=[self.user.username, self.post.id]
@@ -70,9 +73,7 @@ class PostCreateFormTest(TestCase):
         }
 
     def test_create_new_post(self):
-        """Тест для проверки, что пост создаётся,
-        и не попадает в группу, для которой не предназначен,
-        а после создания автор перенаправляется на главную страницу"""
+        """ Валидная форма создаёт запись Post"""
         Post.delete(self.post)
         uploaded = SimpleUploadedFile(
             name='test.gif',
@@ -85,12 +86,12 @@ class PostCreateFormTest(TestCase):
             'image': uploaded
         }
         response = self.authorized_client.post(
-            self.URL_NAMES['NEW_POST'],
+            URL_NAMES['NEW_POST'],
             data=form_data,
             follow=True
         )
         self.assertEqual(response.context['paginator'].count, 1)
-        self.assertRedirects(response, self.URL_NAMES['INDEX'])
+        self.assertRedirects(response, URL_NAMES['INDEX'])
         post = response.context['page'][0]
         self.assertEqual(post.image.size, form_data['image'].size)
         self.assertEqual(post.text, form_data['text'])
@@ -114,8 +115,8 @@ class PostCreateFormTest(TestCase):
         self.assertEqual(post.group.id, form_data["group"])
 
     def test_new_post_fields(self):
-        """ Тест проверяет типы полей формы создания нового поста"""
-        response = self.authorized_client.get(self.URL_NAMES['NEW_POST'])
+        """ Тест проверяет типы полей формы создания нового поста """
+        response = self.authorized_client.get(URL_NAMES['NEW_POST'])
         form_fields = {
             'text': forms.fields.CharField,
             'group': forms.fields.ChoiceField
@@ -138,7 +139,7 @@ class PostCreateFormTest(TestCase):
                 'post_edit',
                 args=[self.user.username, self.post.id]
                 ),
-            'new_post': self.URL_NAMES['NEW_POST'],
+            'new_post': URL_NAMES['NEW_POST'],
         }
         for name, url in url_names.items():
             with self.subTest(url=url):

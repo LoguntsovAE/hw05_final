@@ -20,15 +20,14 @@ UPLOADED = SimpleUploadedFile(
             name='Тестовая картинка',
             content=SMALL_GIF,
             content_type='image/gif'
-        )
+    )
 
 
 @override_settings(MEDIA_ROOT=tempfile.gettempdir())
 class PostPagesTests(TestSettings):
 
     def test_view_function_uses_correct_template(self):
-        """ Тест для проверки того,
-        что view функция использует верный шаблон"""
+        """ Тест проверки шаблона страницы, вызываемого view-функцией """
         TEMPLATE_NAMES = {
             self.URL_NAMES['INDEX']: 'index.html',
             self.URL_NAMES['GROUP']: 'posts/group.html',
@@ -55,6 +54,7 @@ class PostPagesTests(TestSettings):
             self.URL_NAMES['INDEX'],
             self.URL_NAMES['GROUP'],
             self.URL_NAMES['FOLLOW'],
+            self.URL_NAMES['PROFILE'],
         )
         Follow.objects.create(
             user=self.user_not_author,
@@ -148,9 +148,7 @@ class PostPagesTests(TestSettings):
         может комментировать"""
         self.assertFalse(Comment.objects.all().exists())
         form_data = {
-            'post': self.post,
             'text': 'comment',
-            'author': self.user,
         }
         self.authorized_client.post(
             self.URL_NAMES['COMMENT'],
@@ -161,8 +159,6 @@ class PostPagesTests(TestSettings):
         self.assertTrue(Comment.objects.all().exists())
         comment = response.context['comments'][0]
         self.assertEqual(form_data['text'], comment.text)
-        self.assertEqual(form_data['author'], comment.author)
-        self.assertEqual(form_data['post'], comment.post)
 
     def test_author_cat_delete_yourself_comment(self):
         """ Тест проверяет, что комментарий удаляется -
@@ -201,8 +197,8 @@ class PostPagesTests(TestSettings):
     def test_pages_show_correct_context_with_group(self):
         """ Шаблоны сформированы с правильным контекстом группы"""
         response = self.authorized_client.get(self.URL_NAMES['GROUP'])
-        group = response.context['page'][0].group
-        self.assertEqual(group, self.group)
+        group = response.context['group'].slug
+        self.assertEqual(group, self.group.slug)
 
     def test_pages_show_correct_context_with_author(self):
         """ Шаблоны сформированы с правильным контекстом автора"""
@@ -213,8 +209,5 @@ class PostPagesTests(TestSettings):
         for url in url_names:
             with self.subTest(url=url):
                 response = self.authorized_client.get(url)
-                if 'page' in response.context:
-                    author = response.context['page'][0].author
-                else:
-                    author = response.context[0]['post'].author
-                self.assertEqual(author, self.user)
+                author = response.context['author'].id
+                self.assertEqual(author, self.user.id)
