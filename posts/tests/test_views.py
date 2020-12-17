@@ -9,18 +9,19 @@ from posts.models import Comment, Follow, Post
 from posts.settings import POSTS_PER_PAGE
 from posts.tests.test_settings import TestSettings
 
-SMALL_GIF = (b'\x47\x49\x46\x38\x39\x61\x02\x00'
-             b'\x01\x00\x80\x00\x00\x00\x00\x00'
-             b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
-             b'\x00\x00\x00\x2C\x00\x00\x00\x00'
-             b'\x02\x00\x01\x00\x00\x02\x02\x0C'
-             b'\x0A\x00\x3B'
-             )
+SMALL_GIF = (
+    b'\x47\x49\x46\x38\x39\x61\x02\x00'
+    b'\x01\x00\x80\x00\x00\x00\x00\x00'
+    b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
+    b'\x00\x00\x00\x2C\x00\x00\x00\x00'
+    b'\x02\x00\x01\x00\x00\x02\x02\x0C'
+    b'\x0A\x00\x3B'
+)
 UPLOADED = SimpleUploadedFile(
-            name='Тестовая картинка',
-            content=SMALL_GIF,
-            content_type='image/gif'
-    )
+    name='Тестовая картинка',
+    content=SMALL_GIF,
+    content_type='image/gif'
+)
 
 
 @override_settings(MEDIA_ROOT=tempfile.gettempdir())
@@ -47,8 +48,8 @@ class PostPagesTests(TestSettings):
     def test_page_context_include_right_post(self):
         """ Тестирование контекста страницы на правильный пост """
         Post.objects.exclude(id=self.post.id).delete()
-        post = Post.objects.get(id=1)
-        post.image = UPLOADED
+        self.post.image = UPLOADED
+        self.post.save()
         urls = (
             self.URL_NAMES['POST'],
             self.URL_NAMES['INDEX'],
@@ -67,7 +68,7 @@ class PostPagesTests(TestSettings):
                     response_post = context['page'][0]
                 else:
                     response_post = context['post']
-                self.assertEqual(response_post, post)
+                self.assertEqual(response_post, self.post)
 
     def test_cache_index_page(self):
         """Тестирование кэша главной страницы"""
@@ -150,15 +151,19 @@ class PostPagesTests(TestSettings):
         form_data = {
             'text': 'comment',
         }
-        self.authorized_client.post(
+        self.not_author.post(
             self.URL_NAMES['COMMENT'],
             data=form_data,
             Follow=True,
             )
         response = self.authorized_client.get(self.URL_NAMES['POST'])
         self.assertTrue(Comment.objects.all().exists())
-        comment = response.context['comments'][0]
+        comments = response.context['comments']
+        self.assertEqual(comments.count(), 1)
+        comment = comments[0]
         self.assertEqual(form_data['text'], comment.text)
+        self.assertEqual(self.user_not_author, comment.author)
+        self.assertEqual(self.post, comment.post)
 
     def test_author_cat_delete_yourself_comment(self):
         """ Тест проверяет, что комментарий удаляется -
@@ -208,6 +213,6 @@ class PostPagesTests(TestSettings):
         ]
         for url in url_names:
             with self.subTest(url=url):
-                response = self.authorized_client.get(url)
-                author = response.context['author'].id
-                self.assertEqual(author, self.user.id)
+                response = self.not_author.get(url)
+                author = response.context['author']
+                self.assertEqual(author, self.user)
