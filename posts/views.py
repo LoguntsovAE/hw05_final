@@ -2,8 +2,8 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 
-from .forms import CommentForm, PostForm
-from .models import Comment, Follow, Group, Post, User
+from .forms import CommentForm, PostForm, GroupForm
+from .models import Comment, Follow, Group, Post, Like, User
 from .settings import POSTS_PER_PAGE
 
 
@@ -30,14 +30,51 @@ def group_posts(request, slug):
 
 
 @login_required
+def new_group(request):
+    form = GroupForm(request.POST or None)
+    if not form.is_valid():
+        return render(request, 'posts/new_group.html', {'form': form})
+    # надо в модели создать владельца группы
+    group = form.save(commit = False)
+    group.author = request.user
+    group.save()
+    return redirect('index')
+
+
+@login_required
+def group_edit(request, slug):
+    # Как проверить кто автора группы? Надо изменить модель! Сделай!
+    # if != request.user.username:
+    #     return redirect('post', username, post_id)
+    group = get_object_or_404(Group, slug=slug)
+    form = GroupForm(request.POST or None, instance=group)
+    if not form.is_valid():
+        context = {
+            'form': form,
+            'group': group,
+        }
+        return render(request, 'posts/new_post.html', context)
+    form.save()
+    return redirect('group', slug)
+
+
+@login_required
 def new_post(request):
     form = PostForm(request.POST or None,
                     files=request.FILES or None)
     if not form.is_valid():
-        return render(request, 'posts/new.html', {'form': form})
+        return render(request, 'posts/new_post.html', {'form': form})
     post = form.save(commit=False)
     post.author = request.user
     post.save()
+    return redirect('index')
+
+
+@login_required
+def delete_post(request, username, post_id):
+    post = get_object_or_404(Post, id=post_id, author__username=username)
+    if post.author == request.user:
+        post.delete()
     return redirect('index')
 
 
@@ -63,11 +100,15 @@ def post_view(request, username, post_id):
     post = get_object_or_404(Post, author__username=username, id=post_id)
     form = CommentForm()
     comments = post.comments.all()
+    is_liked = request.user.is_authenticated and Like.objects.filter(
+        user=request.user,
+        post=post).exists()
     context = {
         'post': post,
         'author': post.author,
         'form': form,
         'comments': comments,
+        'is_liked': is_liked
     }
     return render(request, 'posts/post.html', context)
 
@@ -85,7 +126,7 @@ def post_edit(request, username, post_id):
             'form': form,
             'post': post,
         }
-        return render(request, 'posts/new.html', context)
+        return render(request, 'posts/new_post.html', context)
     form.save()
     return redirect('post', username, post_id)
 
@@ -162,3 +203,17 @@ def profile_unfollow(request, username):
     )
     follow.delete()
     return redirect('profile', username)
+
+
+@login_required
+def post_like(request, username, post_id):
+    post = get_object_or_404(Post, author__username=username, id=post_id)
+    Like.objects.get_or_create(post=post, user=request.user)
+    return redirect('post', username, post_id)
+
+
+@login_required
+def post_unlike(request, username, post_id):
+    post = get_object_or_404(Post, author__username=username, id=post_id)
+    post.likes.filter(user=request.user).delete()
+    return redirect('post', username, post_id)

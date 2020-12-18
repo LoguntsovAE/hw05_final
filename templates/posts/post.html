@@ -3,7 +3,7 @@
 {% block header %}<h3>Страница поста</h3>{% endblock %}
 {% block content %}
 <div class="container">
-    {% include "posts/post_item.html" with post=post %}
+    {% include "posts/post_item.html" with post=post is_liked=is_liked%}
     {% include 'posts/comments.html' with comments=comments %}
 </div>
 {% endblock %}
