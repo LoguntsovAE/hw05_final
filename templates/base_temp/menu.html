@@ -4,13 +4,31 @@
         <li class="nav-item">
             <a class="nav-link {% if index %}active{% endif %}" 
                 href="{% url 'index' %}">
-                Все авторы
+                Главная
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link {% if follow %}active{% endif %}" 
                 href="{% url 'follow_index' %}">
                 Избранные авторы
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if follow %}active{% endif %}" 
+                href="{% url 'groups_view' %}">
+                Все группы
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if follow %}active{% endif %}"
+                href="{% url 'new_post' %}">
+                    Новая запись
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if follow %}active{% endif %}" 
+                href="{% url 'new_group' %}">
+                Создать группу
             </a>
         </li>
     </ul>

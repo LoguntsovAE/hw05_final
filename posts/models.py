@@ -8,7 +8,7 @@ User = get_user_model()
 
 
 class Group(models.Model):
-    title = models.CharField(max_length=200)
+    title = models.CharField('Заголовок группы', max_length=200)
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -19,7 +19,7 @@ class Group(models.Model):
         'Адрес',
         max_length=20,
         unique=True)
-    description = models.TextField()
+    description = models.TextField('Описание')
 
     def __str__(self):
         return self.title
@@ -47,6 +47,10 @@ class Post(models.Model):
         'Картинка',
         upload_to='posts/',
         blank=True, null=True)
+    # post_like = models.ManyToManyField(
+    #     User,
+    #     related_name='post_liked',
+    #     blank=True)
 
     class Meta:
         ordering = ('-pub_date',)
